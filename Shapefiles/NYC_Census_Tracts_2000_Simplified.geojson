@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "NYC_Census_Tracts_2000_Simplified",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2263" } },
+"features": [
+
+]
+}
