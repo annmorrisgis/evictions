@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v1.6.1/mapbox-gl.css' rel='stylesheet' />
+    <link href="https://fonts.googleapis.com/css?family=Inconsolata|Lato&display=swap" rel="stylesheet">
+    <style>
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        h2,
+        h3 {
+          margin: 0 0 5px;
+          font-size: 1.2em;
+          text-align: right;
+        }
+
+        h3 {
+          font-size: 1em;
+        }
+
+        p {
+          font-size: 0.85em;
+          margin: 10px;
+          text-align: left;
+        }
+
+        /**
+        * Create a position for the map
+        * on the page */
+        #map {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 100%;
+        }
+
+        /**
+        * Set rules for how the map overlays
+        * (information box and legend) will be displayed
+        * on the page. */
+        .map-overlay {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          background: rgba(255, 255, 255, 0.8);
+          margin-right: 20px;
+          font-family: 'Lato', sans-serif;
+          overflow: auto;
+          border-radius: 3px;
+        }
+
+        #features {
+          top: 0;
+          padding:10px;
+          height: 70px;
+          margin-top: 20px;
+        }
+
+        #legend {
+          padding: 10px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+          line-height: 18px;
+          height: 82px;
+          margin-bottom: 40px;
+          width: 150px;
+          font:15px 'Inconsolata', monospace;
+        }
+        .legend-key {
+          display: inline-block;
+          border-radius: 20%;
+          width: 10px;
+          height: 10px;
+          margin-right: 5px;
+        }
+        .source {
+          font:12px 'Lato', 'Helvetica', 'Arial', sans-serif;
+          font-style:italic;
+          text-align:right;
+        }
+        .mapboxgl-popup {
+          max-width: 400px;
+          font: 12px/20px 'Inconsolata', 'Helvetica', 'Arial', sans-serif;
+        }
+    </style>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v1.6.1/mapbox-gl.js'></script>
+</head>
+<body>
+    <div id='map'></div>
+    <div class='map-overlay' id='features'>
+        <h2>NYC: 2000 Median Household<br />Income by Census Tract</h2>
+        <div class="source"><em>Source: US Decennial Census, 2000</em></div>
+        <div id="data"></div>
+    </div>
+    <div class='map-overlay' id='legend'></div>
+
+    <script>
+        // define access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiYW5uLW1vcnJpcyIsImEiOiJjamllcHBoNGswbW1mM2tyd2p2MXR6OWlxIn0.mm8JmphE6gu0jsVRgnEhQA';
+
+        //create map
+        var map = new mapboxgl.Map({
+            container: 'map', // container id
+            style: 'mapbox://styles/ann-morris/ck5juav2w00mm1ipq2nbn04c9' // map style URL from Mapbox Studio
+        });
+
+        // wait for map to load before adjusting it
+        map.on('load', function() {
+            map.getCanvas().style.cursor = 'default';
+            map.fitBounds([[-74.257159, 40.915568], [-73.699215, 40.495992]]);
+            map.getCanvas().style.cursor = 'default';
+            // define layer names
+            var layers = ['No Data', '$1 - 47175', '$47175 - 94349', '$94349 - 141523', '$141523 - 188697'];
+            var colors = ['#FFFFFF', '#FAE2E7', '#E56F87', '#BB2241', '#57101E'];
+
+            // create legend
+            for (i=0; i<layers.length; i++) {
+                var layer = layers[i];
+                var color = colors[i];
+                var item = document.createElement('div');
+                var key = document.createElement('span');
+                key.className = 'legend-key';
+                key.style.backgroundColor = color;
+
+                var value = document.createElement('span');
+                value.innerHTML = layer;
+                item.appendChild(key);
+                item.appendChild(value);
+                legend.appendChild(item);
+              }
+
+              var popup = new mapboxgl.Popup({
+                  closeButton: false,
+                  closeOnClick: true
+              });
+
+              // change info window on hover
+              map.on('mousemove', function (e) {
+                  var layerdata = map.queryRenderedFeatures(e.point, {
+                      layers: ['census_2000_med_hh_income']
+                  });
+              });
+
+              map.on('mouseenter', 'census_2000_med_hh_income', function(e) {
+                  // Change the cursor style as a UI indicator.
+                  map.getCanvas().style.cursor = 'pointer';
+                  var coordinates = e.lngLat;
+                  var ct2000 = e.features[0].properties.ct2000;
+                  var income = e.features[0].properties.median_hh_;
+                  /*while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                      coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                  }*/
+                  popup.setLngLat(coordinates).setHTML(ct2000 + ": $" + income).addTo(map);
+              });
+
+              map.on('mouseleave', 'census_2000_med_hh_income', function() {
+                  map.getCanvas().style.cursor = '';
+                  popup.remove();
+              });
+
+              /*map.on('mouseenter', 'layerdata', function(e) {
+                  console.log('you are here')
+                  new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(e.features[0].properties.ct2000)
+                    .addTo(map);
+              });*/
+
+              /*if (layerdata.length > 0) {
+                  console.log(layerdata[0].properties);
+                  document.getElementById('data').innerHTML = "<div><strong>Census Tract " + layerdata[0].properties.ct2000 + "</strong></div><div><strong>$" + layerdata[0].properties.median_hh_ + "</strong> Median Household Income</div>";
+              };*/
+
+              /*map.on('mouseenter', 'layerdata', function(e) {
+                var coordinates = e.features[0].geometry.coordinates.slice();
+                var description = e.features[0].properties.description;
+
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                };
+
+                popup.setLngLat(coordinates).setHTML(description).addTo(map);
+
+              });*/
+
+              /*if (layerdata > 0) {
+                  document.getElementById('data').innerHTML = "<h3><strong>" + layerdata[0].properties.ct2000 + "</strong></h3><p><strong><em>" + layerdata[0].properties.med_hh_ + "</strong> Median Household Income</em></p>";
+              }*/
+
+          });
+
+          var nav = new mapboxgl.NavigationControl();
+          map.addControl(nav, 'top-left');
+
+</script>
+
+
+
+</script>
+</body>
+</html>
